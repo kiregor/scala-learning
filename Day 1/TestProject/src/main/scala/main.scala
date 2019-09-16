@@ -1,4 +1,4 @@
-class main extends App {
+object main extends App {
 
   println("Hello World!")
 
