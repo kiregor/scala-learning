@@ -1,4 +1,7 @@
+import slick.dbio.Effect
 import slick.jdbc.MySQLProfile.api._
+import slick.sql.FixedSqlAction
+
 import scala.concurrent.{Await, Future}
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.duration.Duration
@@ -45,7 +48,7 @@ object main extends App{
     }
 
     Await.result(insertPeople, Duration.Inf).andThen {
-      case Success(_) => listPeople
+      case Success(_) => searchPeople
       case Failure(error) => println("Query failed to run due to: " + error.getMessage)
     }
   }
@@ -61,6 +64,47 @@ object main extends App{
       case Success(_) => db.close()
       case Failure(error) =>
         println("Listing people failed due to: " + error.getMessage)
+    }
+  }
+
+  def updatePeople: Future[Int] = {
+
+    val queryFuture = Future {
+      db.run(peopleTable.filter(_.id === 1).map(p => p.fName).update("John"))
+    }
+
+    Await.result(queryFuture, Duration.Inf).andThen {
+      case Success(_) => deletePeople
+      case Failure(error) =>
+        println("Updating people failed due to: " + error.getMessage)
+    }
+  }
+
+  def searchPeople: Future[Unit] = {
+
+    val queryFuture = Future {
+      db.run(peopleTable.filter(p => p.id === 1).result).map(_.foreach {
+        case (id, fName, lName, age) => println(s" $id $fName $lName $age")
+      })
+    }
+
+    Await.result(queryFuture, Duration.Inf).andThen {
+      case Success(_) => updatePeople
+      case Failure(error) =>
+        println("Searching people failed due to: " + error.getMessage)
+    }
+  }
+
+  def deletePeople:Future[Int] = {
+
+    val queryFuture = Future {
+      db.run(peopleTable.filter(p => p.fName === "John").delete)
+    }
+
+    Await.result(queryFuture, Duration.Inf).andThen{
+      case Success(_) => listPeople
+      case Failure(error) =>
+        println("Deleting people failed due to: " + error.getMessage)
     }
   }
 
